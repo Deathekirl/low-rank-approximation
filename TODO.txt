@@ -1,0 +1,2 @@
+- créer fichier 3.bis pour centrer sur le pic du click et non pas au milieu ; comparer les perfs
+- mettre ça sur un dépot git
