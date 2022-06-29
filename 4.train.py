@@ -97,7 +97,7 @@ seed = 91741
 bz = 256 # batch size
 epochs = 50
 lr = 1e-3 # learning rate
-lambda_ = 1e-3
+lambda_ = 0.0#1e-3
 device = "cuda:0"
 
 # read data
@@ -235,7 +235,7 @@ for epoch in range(epochs):
         bestModels.append(deepcopy(model.state_dict()))
         print("\tSaving model checkpoint with val acc %0.4f"%val_acc)
 
-    perform_LRA(model, 20, epoch, 10, device)
+    perform_LRA(model, 20, epoch, 10000, device)
     print("Time elapsed: %0.1fs"%(time()-start))
     print()
 
