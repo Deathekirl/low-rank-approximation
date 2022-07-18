@@ -21,7 +21,7 @@ from GoGRU import GoGRU
 from pathlib import Path
 
 dataset_path = str(Path.home()) + "/datasets/DOCC10/DOCC10_test/"
-submission_filename = "submissions/DOCC10_Ytest_pred_noLRA.csv"
+submission_filename = "submissions/DOCC10_Ytest_pred_nrhlra_2.csv"
 os.makedirs("submissions/", exist_ok=True)
 
 device = "cuda:0"
@@ -42,7 +42,7 @@ print("Length of test set:", len(testset))
 
 # create model and load a checkpoint
 model = GoGRU()
-state = torch.load("models/DOCC10_noLRA/gogru.pt")
+state = torch.load("models/DOCC10/gogru.pt")
 model.load_state_dict(state)
 model.eval()
 model.to(device)
