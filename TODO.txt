@@ -1,2 +1,6 @@
 - créer fichier 3.bis pour centrer sur le pic du click et non pas au milieu ; comparer les perfs
+- créer fichier de visualisation des .npy (création de figures)
+- soumettre le fichier de soumission LRA_2
+
+OK
 - mettre ça sur un dépot git
