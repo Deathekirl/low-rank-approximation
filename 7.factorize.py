@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Date: 15-07-2022
+Date: 19-07-2022
 
 Author: Lucas Maison
 
@@ -25,7 +25,15 @@ import torch
 from torch.utils.data import DataLoader
 from time import time
 
-plt.rcParams.update({'font.size': 14})
+plt.rcParams.update({
+'font.size': 16,
+'axes.labelsize': 16,
+'axes.titlesize': 16,
+'legend.fontsize': 16,
+'xtick.labelsize': 16,
+'ytick.labelsize': 16,
+'figure.titlesize': 16
+})
 
 def accuracy(inputs, targets):
     """
@@ -195,7 +203,7 @@ def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
     NUM_STYLES = len(LINE_STYLES)
     cm = plt.get_cmap('gist_rainbow')
     
-    f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(30, 10), sharex=False)
+    f, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(13, 30), sharex=False)
     
     for i, (name, svd_error_by_rank) in enumerate(svd_error_by_rank_by_matrix.items()):
         accuracy_by_rank = accuracy_by_rank_by_matrix[name]
@@ -210,6 +218,10 @@ def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
             lines[0].set_linestyle(LINE_STYLES[i%NUM_STYLES])
     
     for ax in (ax1, ax2, ax3):
+    	# Shrink current axis by 20%
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
+        
         ax.grid()
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         ax.set_xlabel("Rank")
@@ -218,7 +230,7 @@ def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
     ax2.set_ylabel("Accuracy")
     ax3.set_ylabel("Loss")
     
-    plt.figsave("figures/DOCC10/%s/choose_rank_for_each_matrix.png"%modelname)
+    plt.savefig("figures/DOCC10/%s/choose_rank_for_each_matrix.png"%modelname)
     
     return (rank_for_p1_by_matrix,
             rank_for_p2_by_matrix,
@@ -353,7 +365,7 @@ for modelname, (model, state) in models.items():
     c = ["tab:blue", "tab:orange", "tab:green", "tab:red"]
 
     for name, tensor in state.items():
-        if "gru.weight" in name:
+        if "gru.weight" in name and min(tensor.shape) > 1:
             W = tensor.cpu().numpy()
             U, S, V = np.linalg.svd(W, full_matrices=False)
 
@@ -372,7 +384,7 @@ for modelname, (model, state) in models.items():
     plt.title("[Model=%s] Singular values by decreasing order"%modelname)
     plt.legend(loc="best")
     os.makedirs("figures/DOCC10/%s/"%modelname, exist_ok=True)
-    plt.figsave("figures/DOCC10/%s/singular_values.png"%modelname)
+    plt.savefig("figures/DOCC10/%s/singular_values.png"%modelname)
 
     print("Sum of nuclear norms: %0.1f"%sum_of_nuc_norm)
     print("Sum of Frobenius norms: %0.1f"%sum_of_fro_norm)
@@ -432,21 +444,27 @@ for name, (model, state) in models.items():
     memories = []
     affected_matrices = []
     for i, p_tab in enumerate((p1, p2, p3)):
+        print("@ precision p%i"%(i+1))
         save_to_file = False
         
         if i == 0:
             save_to_file = True
             path_to_save = "models/DOCC10_%s/gogru_factorised.pt"%("noLRA" if name == "Baseline" else "LRA")
         
-        loss, acc, memory, affected_matrices = evaluate_rank_tuning(state, p_tab, save_to_file, path_to_save)
+        loss, acc, memory, matrices = evaluate_rank_tuning(state, p_tab, save_to_file, path_to_save)
         losses.append(loss)
         accs.append(acc)
         memories.append(memory)
-        affected_matrices.append(affected_matrices)
+        affected_matrices.append(matrices)
     
     results_dict[xp_name] = (losses, accs, memories, affected_matrices)
     
     print("----------\n")
+
+# saves the dictionnary of results to a file
+os.makedirs("pickle/results_dicts/", exist_ok=True)
+with open("pickle/results_dicts/DOCC10.pkl", "wb") as f:
+    pickle.dump(results_dict, f)
 
 # produces final figure with memory-precision trade-off
 
@@ -472,7 +490,7 @@ for i, (xp_name, (_, acc_br, memory_br, _)) in enumerate(results_dict.items()):
                 label=xp_name,
                 color=color,
                 marker=marker,
-                s=50)
+                s=70)
 
 plt.axvline(100, label="Baseline memory cost", ls='--', color='black')
 plt.axhline(100, label="Baseline performance", ls='--', color='black')
@@ -483,4 +501,4 @@ plt.ylim((90, 102))
 plt.grid()
 plt.legend(loc="best")
 plt.title("Size vs accuracy trade-off")
-plt.figsave("figures/DOCC10/size_accuracy_trade_off.png")
+plt.savefig("figures/DOCC10/size_accuracy_trade_off.png")
