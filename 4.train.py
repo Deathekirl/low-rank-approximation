@@ -9,7 +9,6 @@ Train a model from data
 """
 
 import os
-import pickle
 
 import numpy as np
 
@@ -192,14 +191,14 @@ assert classificationTask == (not regressionTask)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer.zero_grad()
 
-lambda_lr = lambda epoch: max(0.96 ** (epoch - 0), 1e-2)
+def lambda_lr(epoch): max(0.96 ** (epoch - 0), 1e-2)
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda_lr, verbose=False)
 
 # start training
 for epoch in range(epochs):
     start = time()
 
-    ### TRAINING ###
+    # ----- TRAINING -----
     model.train()
 
     train_loss = 0.0
@@ -231,7 +230,7 @@ for epoch in range(epochs):
 
     scheduler.step()
 
-    ### VALIDATION ###
+    # ----- VALIDATION -----
     model.eval()
 
     val_loss = 0.0
@@ -309,5 +308,5 @@ if classificationTask:
 np.save("npy/%s_%s_trace_norms.npy" % (task_name, timestr), trace_norms)
 
 # save best checkpoint to disk
-os.makedirs("models/%s/" % taskname, exist_ok=True)
-torch.save(bestModels[-1], "models/%s/gogru_%s_%s.pt" % (task_name, timestr))
+os.makedirs("models/%s/" % task_name, exist_ok=True)
+torch.save(bestModels[-1], "models/%s/gogru_%s_%s.pt" % (task_name, task_name, timestr))

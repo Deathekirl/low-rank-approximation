@@ -454,7 +454,7 @@ for name, (model, state) in models.items():
     print("----------\n")
 
     print(
-        "Strategy #3 : use an error threshold to decide if a matrix is factorised or not"
+        "Strategy #3 : use an error threshold to decide if a matrix will be factorised or not"
     )
 
     threshold = 15 if name == "Baseline" else 2
