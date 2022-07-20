@@ -50,17 +50,19 @@ model.to(device)
 # compute predictions
 predictions = []
 
-for X, _ in testset: # can take a long time
+for X, _ in testset:  # can take a long time
     out = model(X.unsqueeze(0).to(device))
     predictions.append(torch.argmax(out).item())
 
 print("Number of predictions:", len(predictions))
-print("Writing predictions to file: %s ..."%submission_filename)
+print("Writing predictions to file: %s ..." % submission_filename)
 
 # write predictions to submission file
 le = pickle.load(open("pickle/label_encoder/label_encoder_DOCC10.pkl", "rb"))
 y_test_pred = le.inverse_transform(predictions)
-Y_test_pred_df = pd.DataFrame(data=y_test_pred, index=np.arange(y_test_pred.shape[0]), columns=['TARGET'])
-Y_test_pred_df.to_csv(submission_filename, index_label='ID')
+Y_test_pred_df = pd.DataFrame(
+    data=y_test_pred, index=np.arange(y_test_pred.shape[0]), columns=["TARGET"]
+)
+Y_test_pred_df.to_csv(submission_filename, index_label="ID")
 
 print("Done")

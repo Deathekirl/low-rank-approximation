@@ -8,6 +8,8 @@ Author: Lucas Maison
 Defines classes and functions specific to the DOCC10 dataset
 """
 
+import os
+import pickle
 import torch
 from torch.utils.data import Dataset
 
@@ -16,6 +18,7 @@ import pandas as pd
 
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
+
 
 class DOCC10(Dataset):
     def __init__(self, X, y, a=0, b=None):
@@ -27,6 +30,7 @@ class DOCC10(Dataset):
 
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
+
 
 def load_DOCC10_data(dataset_path, train_size, seed):
     # read data
@@ -45,11 +49,9 @@ def load_DOCC10_data(dataset_path, train_size, seed):
     pickle.dump(le, open("pickle/label_encoder/label_encoder_DOCC10.pkl", "wb"))
 
     # split data
-    X_train, X_val, y_train, y_val = train_test_split(X,
-                                                      y_enc,
-                                                      train_size=train_size,
-                                                      random_state=seed,
-                                                      shuffle=True)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y_enc, train_size=train_size, random_state=seed, shuffle=True
+    )
 
     print("X_train shape:", X_train.shape)
     print("y_train shape:", y_train.shape)
