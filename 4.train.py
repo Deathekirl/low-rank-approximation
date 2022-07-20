@@ -12,16 +12,12 @@ import os
 import pickle
 
 import numpy as np
-import pandas as pd
-
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.model_selection import train_test_split
 
 import torch
 from torch.utils.data import DataLoader
 
 from GoGRU import GoGRU
-from DOCC10 import DOCC10
+from DOCC10 import DOCC10, load_DOCC10_data
 
 from copy import deepcopy
 from time import time, strftime
@@ -91,62 +87,34 @@ def perform_LRA(model, target_rank, epoch, time_interval, device):
 
 # -------------------------------------------------------------------------
 
-task_name = "DOCC10"
-dataset_path = str(Path.home()) + "/datasets/DOCC10/DOCC10_train/"
-train_size = 0.8
-seed = 91741
-bz = 256 # batch size
-epochs = 50
-lr = 1e-3 # learning rate
-lambda_ = 0.0#1e-3
-target_rank = 20
-time_interval = 10000 # cancels HLRA if greater than the number of epochs
 device = "cuda:0"
-epoch_a, epoch_b = 5, 25
-criterion = torch.nn.CrossEntropyLoss()
-classificationTask = True
-regressionTask = False
+seed = 91741
+train_size = 0.8
+bz = 256 # batch size
+task_name = "DOCC10"
 
-# read data
-X = np.load(dataset_path + "DOCC10_Xtrain_small_bis.npy")
-Y_df = pd.read_csv(dataset_path + "DOCC10_Ytrain.csv", index_col=0)
-y = Y_df["TARGET"].values
+if task_name == "DOCC10":
+    dataset_path = str(Path.home()) + "/datasets/DOCC10/DOCC10_train/"
+    epochs = 50
+    lr = 1e-3 # learning rate
+    lambda_ = 0.0#1e-3
+    target_rank = 20
+    time_interval = 10000 # cancels HLRA if greater than the number of epochs
+    epoch_a, epoch_b = 5, 25
+    criterion = torch.nn.CrossEntropyLoss()
+    classificationTask = True
+    regressionTask = False
 
-print("X shape:", X.shape)
-print("y shape:", y.shape)
+    # create dataset objects
+    X_train_std, y_train, X_val_std, y_val = load_DOCC10_data(dataset_path, train_size, seed)
+    trainset = DOCC10(X_train_std, y_train, b=len(X_train_std)//bz * bz)
+    valset = DOCC10(X_val_std, y_val, b=len(X_val_std)//bz * bz)
 
-# preprocess data
-le = LabelEncoder()
-y_enc = le.fit_transform(y)
-print("y_enc shape:", y_enc.shape)
-os.makedirs("pickle/label_encoder/", exist_ok=True)
-pickle.dump(le, open("pickle/label_encoder/label_encoder_DOCC10.pkl", "wb"))
-
-# split data
-X_train, X_val, y_train, y_val = train_test_split(X,
-                                                  y_enc,
-                                                  train_size=train_size,
-                                                  random_state=seed,
-                                                  shuffle=True)
-
-print("X_train shape:", X_train.shape)
-print("y_train shape:", y_train.shape)
-print("X_val shape:", X_val.shape)
-print("y_val shape:", y_val.shape)
-
-# scale data
-sc = StandardScaler()
-X_train_std = sc.fit_transform(X_train)
-X_val_std = sc.transform(X_val)
-os.makedirs("pickle/standard_scaler/", exist_ok=True)
-pickle.dump(sc, open("pickle/standard_scaler/standard_scaler_DOCC10_bis.pkl", "wb"))
-
-# create dataset objects
-trainset = DOCC10(X_train_std, y_train, b=len(X_train_std)//bz * bz)
-valset = DOCC10(X_val_std, y_val, b=len(X_val_std)//bz * bz)
-
-# create model
-model = GoGRU(dropout=0.5)
+    # create model
+    model = GoGRU(dropout=0.5)
+else:
+    print("Unknown task")
+    exit(1)
 
 print("Datasets' length (may be smaller than original data due to last batch dismissal):")
 print("Trainset:", len(trainset))
@@ -173,7 +141,7 @@ bestValLosses = [10000.0]
 
 assert classificationTask == not regressionTask
 
-# define optimizer, scheduler, criterion
+# define optimizer, scheduler
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer.zero_grad()
 
