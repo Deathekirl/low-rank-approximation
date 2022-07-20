@@ -5,7 +5,7 @@ Date: 28-06-2022
 
 Author: Lucas Maison
 
-Prepares data by cropping audio samples from 8192 to 256
+Prepares DOCC10 data by cropping audio samples from 8192 to 256
 """
 
 import numpy as np
