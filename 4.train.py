@@ -191,7 +191,7 @@ assert classificationTask == (not regressionTask)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer.zero_grad()
 
-def lambda_lr(epoch): max(0.96 ** (epoch - 0), 1e-2)
+def lambda_lr(epoch): return max(0.96 ** (epoch - 0), 1e-2)
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda_lr, verbose=False)
 
 # start training
