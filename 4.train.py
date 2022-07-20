@@ -16,9 +16,6 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from GoGRU import GoGRU
-from DOCC10 import DOCC10, load_DOCC10_data
-
 from copy import deepcopy
 from time import time, strftime
 from pathlib import Path
@@ -94,6 +91,10 @@ bz = 256 # batch size
 task_name = "DOCC10"
 
 if task_name == "DOCC10":
+    from GoGRU import GoGRU
+    from DOCC10 import DOCC10, load_DOCC10_data
+
+    # task parameters
     dataset_path = str(Path.home()) + "/datasets/DOCC10/DOCC10_train/"
     epochs = 50
     lr = 1e-3 # learning rate
@@ -107,11 +108,35 @@ if task_name == "DOCC10":
 
     # create dataset objects
     X_train_std, y_train, X_val_std, y_val = load_DOCC10_data(dataset_path, train_size, seed)
-    trainset = DOCC10(X_train_std, y_train, b=len(X_train_std)//bz * bz)
-    valset = DOCC10(X_val_std, y_val, b=len(X_val_std)//bz * bz)
+    trainset = DOCC10(X_train_std, y_train)
+    valset = DOCC10(X_val_std, y_val)
 
     # create model
     model = GoGRU(dropout=0.5)
+elif task_name == "SequentialMNIST":
+    from torchvision.datasets import MNIST
+    from GoGRU import GoGRU_sequence
+    from SequentialMNIST import SequentialMNIST
+
+    # task parameters
+    epochs = 150
+    lr = 1e-2
+    lambda_ = 1e-4
+    target_rank = 40
+    time_interval = 20 # cancels HLRA if greater than the number of epochs
+    epoch_a, epoch_b = 10, 120
+    criterion = torch.nn.MSELoss()
+    classificationTask = False
+    regressionTask = True
+
+    # create dataset objects
+    dataset_train = MNIST(root=str(Path.home()) + "/datasets", train=True, download=True)
+    length = int(len(dataset_train)*train_size)//bz * bz
+    trainset = SequentialMNIST(dataset_train, b=length)
+    valset = SequentialMNIST(dataset_train, a=length) # last incomplete batch will be dropped, see dataloaders
+
+    # create models
+    model = GoGRU_sequence(bidirectional=True, hidden_size=100, num_layers=2, dropout=0.2)
 else:
     print("Unknown task")
     exit(1)
@@ -121,8 +146,8 @@ print("Trainset:", len(trainset))
 print("Valset:", len(valset))
 
 # create dataloaders
-trainloader = DataLoader(trainset, batch_size=bz, shuffle=True)
-valloader = DataLoader(valset, batch_size=bz, shuffle=True)
+trainloader = DataLoader(trainset, batch_size=bz, shuffle=True, drop_last=True)
+valloader = DataLoader(valset, batch_size=bz, shuffle=True, drop_last=True)
 
 # move model to device
 model.to(device)
