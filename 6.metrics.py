@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Date: 15-07-2022
+Date: 21-07-2022
 
 Author: Lucas Maison
 
@@ -26,25 +26,39 @@ plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 f, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(16, 12))
 
-name = "DOCC10_29062022-122330_%s.%s"
+name = "SequentialMNIST_21072022-120843_%s.%s"
 path = "npy/" + name % ("%s", "npy")
 train_losses = np.load(path % "train_losses")
 val_losses = np.load(path % "val_losses")
-train_accs = np.load(path % "train_accs")
-val_accs = np.load(path % "val_accs")
 trace_norms = np.load(path % "trace_norms")
+
+regressionTask = False
+try:
+    train_accs = np.load(path % "train_accs")
+    val_accs = np.load(path % "val_accs")
+except OSError:
+    print("Accuracy files not found")
+    print("This is expected for a regression task (like SequentialMNIST)")
+
+    regressionTask = True
 
 ax1.plot(train_losses)
 ax2.plot(val_losses)
 ax3.plot(trace_norms)
-ax4.plot(train_accs)
-ax5.plot(val_accs)
 
 ax1.set_ylabel("Train loss")
 ax2.set_ylabel("Val loss")
 ax3.set_ylabel("Trace norm")
-ax4.set_ylabel("Train acc")
-ax5.set_ylabel("Val acc")
+
+if not regressionTask:
+    ax4.plot(train_accs)
+    ax5.plot(val_accs)
+
+    ax4.set_ylabel("Train acc")
+    ax5.set_ylabel("Val acc")
+else:
+    f.delaxes(ax4)
+    f.delaxes(ax5)
 
 f.delaxes(ax6)
 

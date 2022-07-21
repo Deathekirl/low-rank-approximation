@@ -1,6 +1,11 @@
-- créer fichier 3.bis pour centrer sur le pic du click et non pas au milieu ; comparer les perfs
-- créer fichier de visualisation des .npy (création de figures)
-- soumettre le fichier de soumission LRA_2
+- fusion 3 et 3 bis (option sys)
+- adaptation du GoGru pour AugMod
+- lancement de training augmod
+- factorisation sur sequentialMNIST post training
+
 
 OK
 - mettre ça sur un dépot git
+- créer fichier 3.bis pour centrer sur le pic du click et non pas au milieu ; comparer les perfs
+- créer fichier de visualisation des .npy (création de figures)
+- soumettre le fichier de soumission LRA_2

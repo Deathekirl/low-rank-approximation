@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Date: 20-07-2022
+Date: 21-07-2022
 
 Author: Lucas Maison
 
@@ -101,6 +101,8 @@ train_size = 0.8
 bz = 256  # batch size
 task_name = "SequentialMNIST"
 
+print("Task :", task_name)
+
 if task_name == "DOCC10":
     from GoGRU import GoGRU
     from DOCC10 import DOCC10, load_DOCC10_data
@@ -191,7 +193,11 @@ assert classificationTask == (not regressionTask)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 optimizer.zero_grad()
 
-def lambda_lr(epoch): return max(0.96 ** (epoch - 0), 1e-2)
+
+def lambda_lr(epoch):
+    return max(0.96 ** (epoch - 0), 1e-2)
+
+
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda_lr, verbose=False)
 
 # start training

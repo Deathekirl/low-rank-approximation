@@ -19,4 +19,7 @@ dataset_train = MNIST(root=path, train=True, download=True)
 dataset_test = MNIST(root=path, train=False, download=True)
 
 # AugMod
-urlretrieve("https://augmod.blob.core.windows.net/augmod/augmod.zip", filename=path + "/augmod.zip")
+urlretrieve(
+    "https://augmod.blob.core.windows.net/augmod/augmod.zip",
+    filename=path + "/augmod.zip",
+)
