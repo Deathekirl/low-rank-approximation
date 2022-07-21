@@ -1,7 +1,5 @@
 - fusion 3 et 3 bis (option sys)
-- adaptation du GoGru pour AugMod
 - lancement de training augmod
-- factorisation sur sequentialMNIST post training
 
 
 OK
@@ -9,3 +7,5 @@ OK
 - créer fichier 3.bis pour centrer sur le pic du click et non pas au milieu ; comparer les perfs
 - créer fichier de visualisation des .npy (création de figures)
 - soumettre le fichier de soumission LRA_2
+- adaptation du GoGru pour AugMod (=> utiliser input_size=2)
+- factorisation sur sequentialMNIST post training

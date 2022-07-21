@@ -12,11 +12,8 @@ import os
 import pickle
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-
-from sklearn.model_selection import train_test_split
 
 import torch
 from torch.utils.data import DataLoader
@@ -187,23 +184,29 @@ def find_optimal_rank_for_each_matrix(state, ranks, perf_thresholds, modelname):
                     accuracy_by_rank.append(valid_acc)
 
                     if (
-                        (classificationTask and valid_acc >= perf_thresholds[2] or not classificationTask and valid_loss <= perf_thresholds[2])
-                        and name not in rank_for_p3_by_matrix
-                    ):
+                        classificationTask
+                        and valid_acc >= perf_thresholds[2]
+                        or not classificationTask
+                        and valid_loss <= perf_thresholds[2]
+                    ) and name not in rank_for_p3_by_matrix:
                         rank_for_p3_by_matrix[name] = rank
                         print("Rank @p3 for %s : %i" % (name, rank))
 
                     if (
-                        (classificationTask and valid_acc >= perf_thresholds[1] or not classificationTask and valid_loss <= perf_thresholds[1])
-                        and name not in rank_for_p2_by_matrix
-                    ):
+                        classificationTask
+                        and valid_acc >= perf_thresholds[1]
+                        or not classificationTask
+                        and valid_loss <= perf_thresholds[1]
+                    ) and name not in rank_for_p2_by_matrix:
                         rank_for_p2_by_matrix[name] = rank
                         print("Rank @p2 for %s : %i" % (name, rank))
 
                     if (
-                        (classificationTask and valid_acc >= perf_thresholds[0] or not classificationTask and valid_loss <= perf_thresholds[0])
-                        and name not in rank_for_p1_by_matrix
-                    ):
+                        classificationTask
+                        and valid_acc >= perf_thresholds[0]
+                        or not classificationTask
+                        and valid_loss <= perf_thresholds[0]
+                    ) and name not in rank_for_p1_by_matrix:
                         rank_for_p1_by_matrix[name] = rank
                         print("Rank @p1 for %s : %i" % (name, rank))
                         go = False  # skip the rest of the ranks
@@ -249,7 +252,9 @@ def find_optimal_rank_for_each_matrix(state, ranks, perf_thresholds, modelname):
     ax2.set_ylabel("Accuracy")
     ax3.set_ylabel("Loss")
 
-    plt.savefig("figures/%s/%s/choose_rank_for_each_matrix.png" % (task_name, modelname))
+    plt.savefig(
+        "figures/%s/%s/choose_rank_for_each_matrix.png" % (task_name, modelname)
+    )
 
     return (rank_for_p1_by_matrix, rank_for_p2_by_matrix, rank_for_p3_by_matrix)
 
@@ -333,7 +338,9 @@ if task_name == "DOCC10":
         "NR+HLRA": "models/DOCC10_LRA/gogru.pt",
     }
 
-    _, _, X_val_std, y_val = load_DOCC10_data(dataset_path, train_size, seed, load_from_pickle=True)
+    _, _, X_val_std, y_val = load_DOCC10_data(
+        dataset_path, train_size, seed, load_from_pickle=True
+    )
     valset = DOCC10(X_val_std, y_val)
 
     modelConstructor = GoGRU
@@ -342,9 +349,15 @@ if task_name == "DOCC10":
     # ranks and thresholds to be used in the experiments
     ranks = list(range(10, 300 + 1, 10))
     ranks_for_ranktuning = np.arange(1, 50 + 1, 1)
-    def threshold_maker(name): return 15 if name == "Baseline" else 2
-    def perf_thresholds_maker(name): return (0.916, 0.914, 0.911) if name == "Baseline" else (0.910, 0.908, 0.905)
+
+    def threshold_maker(name):
+        return 15 if name == "Baseline" else 2
+
+    def perf_thresholds_maker(name):
+        return (0.916, 0.914, 0.911) if name == "Baseline" else (0.910, 0.908, 0.905)
+
 elif task_name == "SequentialMNIST":
+    from torchvision.datasets import MNIST
     from GoGRU import GoGRU_sequence
     from SequentialMNIST import SequentialMNIST
 
@@ -366,8 +379,13 @@ elif task_name == "SequentialMNIST":
     # ranks to be considered
     ranks = list(range(10, 200 + 1, 10))
     ranks_for_ranktuning = np.arange(1, 120 + 1, 1)
-    def threshold_maker(name): return 20 if name == "Baseline" else 10
-    def perf_thresholds_maker(name): return (0.309, 0.311, 0.315) if name == "Baseline" else (0.309, 0.311, 0.315)
+
+    def threshold_maker(name):
+        return 20 if name == "Baseline" else 10
+
+    def perf_thresholds_maker(name):
+        return (0.309, 0.311, 0.315) if name == "Baseline" else (0.309, 0.311, 0.315)
+
 else:
     print("Unknown task")
     exit(1)
@@ -489,7 +507,9 @@ for name, (model, state) in models.items():
     xp_name = "%s - Rank-tuning" % (name)
 
     perf_thresholds = perf_thresholds_maker(name)
-    p1, p2, p3 = find_optimal_rank_for_each_matrix(state, ranks_for_ranktuning, perf_thresholds, name)
+    p1, p2, p3 = find_optimal_rank_for_each_matrix(
+        state, ranks_for_ranktuning, perf_thresholds, name
+    )
 
     print("Evaluating model with optimal ranks...")
 
@@ -504,7 +524,8 @@ for name, (model, state) in models.items():
         if i == 0:
             save_to_file = True
             path_to_save = "models/%s/gogru_%s_factorised.pt" % (
-                task_name, "noLRA" if name == "Baseline" else "LRA"
+                task_name,
+                "noLRA" if name == "Baseline" else "LRA",
             )
 
         loss, acc, memory, matrices = evaluate_rank_tuning(
@@ -521,7 +542,7 @@ for name, (model, state) in models.items():
 
 # saves the dictionnary of results to a file
 os.makedirs("pickle/results_dicts/", exist_ok=True)
-with open("pickle/results_dicts/%s.pkl"%task_name, "wb") as f:
+with open("pickle/results_dicts/%s.pkl" % task_name, "wb") as f:
     pickle.dump(results_dict, f)
 
 # produces final figure with memory-precision trade-off
@@ -529,7 +550,11 @@ with open("pickle/results_dicts/%s.pkl"%task_name, "wb") as f:
 fig = plt.figure(figsize=(15, 15))
 
 baseline_size = results_dict["Baseline"][2][-1]
-baseline_perf = results_dict["Baseline"][1][-1] if classificationTask else results_dict["Baseline"][0][-1]
+baseline_perf = (
+    results_dict["Baseline"][1][-1]
+    if classificationTask
+    else results_dict["Baseline"][0][-1]
+)
 
 plt.xlabel("% of baseline size")
 plt.ylabel("% of baseline performance")
@@ -552,7 +577,7 @@ colors = [
 for i, (xp_name, (loss_br, acc_br, memory_br, _)) in enumerate(results_dict.items()):
     color = colors[i]
     marker = "o"
-    perf_br = acc_br is classificationTask else loss_br
+    perf_br = acc_br if classificationTask else loss_br
 
     plt.scatter(
         np.array(memory_br) / baseline_size * 100,
@@ -575,4 +600,4 @@ else:
 plt.grid()
 plt.legend(loc="best")
 plt.title("Size vs accuracy trade-off")
-plt.savefig("figures/%s/size_accuracy_trade_off.png"%task_name)
+plt.savefig("figures/%s/size_accuracy_trade_off.png" % task_name)

@@ -65,14 +65,18 @@ def load_DOCC10_data(dataset_path, train_size, seed, load_from_pickle=False):
 
     # scale data
     if load_from_pickle:
-        sc = pickle.load(open("pickle/standard_scaler/standard_scaler_DOCC10.pkl", "rb"))
+        sc = pickle.load(
+            open("pickle/standard_scaler/standard_scaler_DOCC10.pkl", "rb")
+        )
         X_train_std = sc.transform(X_train)
     else:
         sc = StandardScaler()
         X_train_std = sc.fit_transform(X_train)
 
         os.makedirs("pickle/standard_scaler/", exist_ok=True)
-        pickle.dump(sc, open("pickle/standard_scaler/standard_scaler_DOCC10_bis.pkl", "wb"))
+        pickle.dump(
+            sc, open("pickle/standard_scaler/standard_scaler_DOCC10_bis.pkl", "wb")
+        )
     X_val_std = sc.transform(X_val)
 
     return X_train_std, y_train, X_val_std, y_val

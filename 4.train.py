@@ -99,7 +99,7 @@ device = "cuda:0"
 seed = 91741
 train_size = 0.8
 bz = 256  # batch size
-task_name = "SequentialMNIST"
+task_name = "AugMod"
 
 print("Task :", task_name)
 
@@ -158,6 +158,30 @@ elif task_name == "SequentialMNIST":
     model = GoGRU_sequence(
         bidirectional=True, hidden_size=100, num_layers=2, dropout=0.2
     )
+elif task_name == "AugMod":
+    from AugMod import AugMod, read_augmod
+    from GoGRU import GoGRU
+
+    # task parameters
+    epochs = 200
+    lr = 1e-3
+    lambda_ = 0.0
+    target_rank = 20
+    time_interval = 10000
+    epoch_a, epoch_b = 10, 120
+    criterion = torch.nn.CrossEntropyLoss()
+    classificationTask = True
+    regressionTask = False
+
+    # create dataset objects
+    signals_train, signals_val, targets_train, targets_val = read_augmod(
+        str(Path.home()) + "/AugMod/augmod.hdf5", train_size, seed
+    )
+    trainset = AugMod(signals_train, targets_train)
+    valset = AugMod(signals_val, targets_val)
+
+    # create models
+    model = GoGRU(input_size=2, output_size=7)
 else:
     print("Unknown task")
     exit(1)
