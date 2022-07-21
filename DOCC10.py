@@ -32,7 +32,7 @@ class DOCC10(Dataset):
         return self.X[idx], self.y[idx]
 
 
-def load_DOCC10_data(dataset_path, train_size, seed):
+def load_DOCC10_data(dataset_path, train_size, seed, load_from_pickle=False):
     # read data
     X = np.load(dataset_path + "DOCC10_Xtrain_small_bis.npy")
     Y_df = pd.read_csv(dataset_path + "DOCC10_Ytrain.csv", index_col=0)
@@ -42,11 +42,16 @@ def load_DOCC10_data(dataset_path, train_size, seed):
     print("y shape:", y.shape)
 
     # preprocess data
-    le = LabelEncoder()
-    y_enc = le.fit_transform(y)
+    if load_from_pickle:
+        le = pickle.load(open("pickle/label_encoder/label_encoder_DOCC10.pkl", "rb"))
+        y_enc = le.transform(y)
+    else:
+        le = LabelEncoder()
+        y_enc = le.fit_transform(y)
+
+        os.makedirs("pickle/label_encoder/", exist_ok=True)
+        pickle.dump(le, open("pickle/label_encoder/label_encoder_DOCC10.pkl", "wb"))
     print("y_enc shape:", y_enc.shape)
-    os.makedirs("pickle/label_encoder/", exist_ok=True)
-    pickle.dump(le, open("pickle/label_encoder/label_encoder_DOCC10.pkl", "wb"))
 
     # split data
     X_train, X_val, y_train, y_val = train_test_split(
@@ -59,10 +64,15 @@ def load_DOCC10_data(dataset_path, train_size, seed):
     print("y_val shape:", y_val.shape)
 
     # scale data
-    sc = StandardScaler()
-    X_train_std = sc.fit_transform(X_train)
+    if load_from_pickle:
+        sc = pickle.load(open("pickle/standard_scaler/standard_scaler_DOCC10.pkl", "rb"))
+        X_train_std = sc.transform(X_train)
+    else:
+        sc = StandardScaler()
+        X_train_std = sc.fit_transform(X_train)
+
+        os.makedirs("pickle/standard_scaler/", exist_ok=True)
+        pickle.dump(sc, open("pickle/standard_scaler/standard_scaler_DOCC10_bis.pkl", "wb"))
     X_val_std = sc.transform(X_val)
-    os.makedirs("pickle/standard_scaler/", exist_ok=True)
-    pickle.dump(sc, open("pickle/standard_scaler/standard_scaler_DOCC10_bis.pkl", "wb"))
 
     return X_train_std, y_train, X_val_std, y_val

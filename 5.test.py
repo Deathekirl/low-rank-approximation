@@ -88,7 +88,7 @@ elif task_name == "SequentialMNIST":
     print("Length of test set:", len(testset))
     testloader = DataLoader(testset, batch_size=256, shuffle=False, drop_last=True)
 
-    timecode = "21072022-120843"
+    timecode = "21072022-132652"
 
     # create models
     model = GoGRU_sequence()
@@ -100,6 +100,9 @@ elif task_name == "SequentialMNIST":
     # compute test loss
     loss = 0.0
     for top, bottom in testloader:
+        top = top.to(device)
+        bottom = bottom.to(device)
+
         with torch.no_grad():
             prediction = model(top)
         mse = torch.nn.MSELoss()(prediction, bottom).item()
@@ -113,6 +116,9 @@ elif task_name == "SequentialMNIST":
     testloader = DataLoader(testset, batch_size=1, shuffle=False, drop_last=True)
     # create a figure showing reconstruction artifacts
     for top, bottom in testloader:
+        top = top.to(device)
+        bottom = bottom.to(device)
+
         with torch.no_grad():
             prediction = model(top)
         original = torch.cat((top, bottom), axis=0).squeeze().reshape(28, 28)
@@ -130,6 +136,6 @@ elif task_name == "SequentialMNIST":
     image = Image.fromarray(np.concatenate(arrays, axis=1))
 
     os.makedirs("figures/SequentialMNIST/", exist_ok=True)
-    image.save("figures/SequentialMNIST/quality_of_reconstruction_%s/png" % timecode)
+    image.save("figures/SequentialMNIST/quality_of_reconstruction_%s.png" % timecode)
 
 print("Done")

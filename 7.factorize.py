@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Date: 19-07-2022
+Date: 21-07-2022
 
 Author: Lucas Maison
 
@@ -15,9 +15,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-
-from GoGRU import GoGRU
-from DOCC10 import DOCC10
 
 from sklearn.model_selection import train_test_split
 
@@ -239,7 +236,7 @@ def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
             lines[0].set_linestyle(LINE_STYLES[i % NUM_STYLES])
 
     for ax in (ax1, ax2, ax3):
-        # Shrink current axis by 20%
+        # Shrink current axis by 25%
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
 
@@ -251,7 +248,7 @@ def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
     ax2.set_ylabel("Accuracy")
     ax3.set_ylabel("Loss")
 
-    plt.savefig("figures/DOCC10/%s/choose_rank_for_each_matrix.png" % modelname)
+    plt.savefig("figures/%s/%s/choose_rank_for_each_matrix.png" % (task_name, modelname))
 
     return (rank_for_p1_by_matrix, rank_for_p2_by_matrix, rank_for_p3_by_matrix)
 
@@ -317,43 +314,37 @@ def evaluate_rank_tuning(state, rank_per_matrix, save_to_file=False, path_to_sav
 
 # -------------------------------------------------------------------------
 
-dataset_path = str(Path.home()) + "/datasets/DOCC10/DOCC10_train/"
-train_size = 0.8
-seed = 91741
-bz = 256  # batch size
-device = "cuda:0"
-models = {
-    "Baseline": "models/DOCC10_noLRA/gogru.pt",
-    "NR+HLRA": "models/DOCC10_LRA/gogru.pt",
-}
+task_name = "DOCC10"
 
+if task_name == "DOCC10":
+    from GoGRU import GoGRU
+    from DOCC10 import DOCC10, load_DOCC10_data
 
-# read data
-X = np.load(dataset_path + "DOCC10_Xtrain_small.npy")
-Y_df = pd.read_csv(dataset_path + "DOCC10_Ytrain.csv", index_col=0)
-y = Y_df["TARGET"].values
+    dataset_path = str(Path.home()) + "/datasets/DOCC10/DOCC10_train/"
+    train_size = 0.8
+    seed = 91741
+    bz = 256  # batch size
+    device = "cuda:0"
+    models = {
+        "Baseline": "models/DOCC10_noLRA/gogru.pt",
+        "NR+HLRA": "models/DOCC10_LRA/gogru.pt",
+    }
 
-# encode targets
-le = pickle.load(open("pickle/label_encoder/label_encoder_DOCC10.pkl", "rb"))
-y_enc = le.transform(y)
+    _, _, X_val_std, y_val = load_DOCC10_data(dataset_path, train_size, seed, load_from_pickle=True)
+    valset = DOCC10(X_val_std, y_val)
 
-# split data
-X_train, X_val, y_train, y_val = train_test_split(
-    X, y_enc, train_size=train_size, random_state=seed, shuffle=True
-)
-# scale data using pickled StandardScaler
-sc = pickle.load(open("pickle/standard_scaler/standard_scaler_DOCC10.pkl", "rb"))
-X_train_std = sc.transform(X_train)
-X_val_std = sc.transform(X_val)
-
-valset = DOCC10(X_val_std, y_val, b=len(X_val_std) // bz * bz)
+    modelConstructor = GoGRU
+    criterion = torch.nn.CrossEntropyLoss()
+else:
+    print("Unknown task")
+    exit(1)
 
 print("Number of samples in validation set: %i" % len(valset))
-valloader = DataLoader(valset, batch_size=bz, shuffle=True)
+valloader = DataLoader(valset, batch_size=bz, shuffle=True, drop_last=True)
 
 # load model(s)
 for name, file_name in models.items():
-    model = GoGRU()
+    model = modelConstructor()
 
     state = torch.load(file_name)
     model.load_state_dict(state)
@@ -413,14 +404,12 @@ for modelname, (model, state) in models.items():
     plt.xlabel("Index")
     plt.title("[Model=%s] Singular values by decreasing order" % modelname)
     plt.legend(loc="best")
-    os.makedirs("figures/DOCC10/%s/" % modelname, exist_ok=True)
-    plt.savefig("figures/DOCC10/%s/singular_values.png" % modelname)
+    os.makedirs("figures/%s/%s/" % (task_name, modelname), exist_ok=True)
+    plt.savefig("figures/%s/%s/singular_values.png" % (task_name, modelname))
 
     print("Sum of nuclear norms: %0.1f" % sum_of_nuc_norm)
     print("Sum of Frobenius norms: %0.1f" % sum_of_fro_norm)
     print("----------\n")
-
-criterion = torch.nn.CrossEntropyLoss()
 
 # compute accuracy of model without any rank modification
 for name, (model, state) in models.items():
@@ -489,8 +478,8 @@ for name, (model, state) in models.items():
 
         if i == 0:
             save_to_file = True
-            path_to_save = "models/DOCC10_%s/gogru_factorised.pt" % (
-                "noLRA" if name == "Baseline" else "LRA"
+            path_to_save = "models/%s/gogru_%s_factorised.pt" % (
+                task_name, "noLRA" if name == "Baseline" else "LRA"
             )
 
         loss, acc, memory, matrices = evaluate_rank_tuning(
@@ -507,7 +496,7 @@ for name, (model, state) in models.items():
 
 # saves the dictionnary of results to a file
 os.makedirs("pickle/results_dicts/", exist_ok=True)
-with open("pickle/results_dicts/DOCC10.pkl", "wb") as f:
+with open("pickle/results_dicts/%s.pkl"%task_name, "wb") as f:
     pickle.dump(results_dict, f)
 
 # produces final figure with memory-precision trade-off
@@ -557,4 +546,4 @@ plt.ylim((90, 102))
 plt.grid()
 plt.legend(loc="best")
 plt.title("Size vs accuracy trade-off")
-plt.savefig("figures/DOCC10/size_accuracy_trade_off.png")
+plt.savefig("figures/%s/size_accuracy_trade_off.png"%task_name)
