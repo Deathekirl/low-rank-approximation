@@ -67,7 +67,8 @@ def valid_accuracy(model, new_weights, original_weights=None):
 
             out = model(valid_input)
 
-            valid_accs.append(accuracy(out, valid_target).cpu())
+            if classificationTask:
+                valid_accs.append(accuracy(out, valid_target).cpu())
             valid_losses.append(criterion(out, valid_target).item())
 
     valid_acc = np.mean(valid_accs)
@@ -138,7 +139,7 @@ def factorize_using_same_rank_for_all_matrices(state, ranks, threshold, ih_only=
     return loss_by_rank, acc_by_rank, memory_by_rank, affected_matrices_by_rank
 
 
-def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
+def find_optimal_rank_for_each_matrix(state, ranks, perf_thresholds, modelname):
     """
     This function takes a model and compute the optimal rank for each matrix,
     that is, the lowest rank achievable while still respecting precision targets (p1, p2, p3)
@@ -154,7 +155,7 @@ def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
 
     # compute SVD of weight matrices
     for name, tensor in state.items():
-        if "gru.weight" in name:
+        if "gru.weight" in name and min(tensor.shape) > 1:
             print("\nWorking on %s" % name)
 
             modules = {}
@@ -186,21 +187,21 @@ def find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, modelname):
                     accuracy_by_rank.append(valid_acc)
 
                     if (
-                        valid_acc >= acc_thresholds[2]
+                        (classificationTask and valid_acc >= perf_thresholds[2] or not classificationTask and valid_loss <= perf_thresholds[2])
                         and name not in rank_for_p3_by_matrix
                     ):
                         rank_for_p3_by_matrix[name] = rank
                         print("Rank @p3 for %s : %i" % (name, rank))
 
                     if (
-                        valid_acc >= acc_thresholds[1]
+                        (classificationTask and valid_acc >= perf_thresholds[1] or not classificationTask and valid_loss <= perf_thresholds[1])
                         and name not in rank_for_p2_by_matrix
                     ):
                         rank_for_p2_by_matrix[name] = rank
                         print("Rank @p2 for %s : %i" % (name, rank))
 
                     if (
-                        valid_acc >= acc_thresholds[0]
+                        (classificationTask and valid_acc >= perf_thresholds[0] or not classificationTask and valid_loss <= perf_thresholds[0])
                         and name not in rank_for_p1_by_matrix
                     ):
                         rank_for_p1_by_matrix[name] = rank
@@ -314,17 +315,19 @@ def evaluate_rank_tuning(state, rank_per_matrix, save_to_file=False, path_to_sav
 
 # -------------------------------------------------------------------------
 
-task_name = "DOCC10"
+device = "cuda:0"
+train_size = 0.8
+seed = 91741
+bz = 256  # batch size
+task_name = "SequentialMNIST"
 
 if task_name == "DOCC10":
     from GoGRU import GoGRU
     from DOCC10 import DOCC10, load_DOCC10_data
 
+    classificationTask = True
     dataset_path = str(Path.home()) + "/datasets/DOCC10/DOCC10_train/"
-    train_size = 0.8
-    seed = 91741
-    bz = 256  # batch size
-    device = "cuda:0"
+
     models = {
         "Baseline": "models/DOCC10_noLRA/gogru.pt",
         "NR+HLRA": "models/DOCC10_LRA/gogru.pt",
@@ -335,6 +338,36 @@ if task_name == "DOCC10":
 
     modelConstructor = GoGRU
     criterion = torch.nn.CrossEntropyLoss()
+
+    # ranks and thresholds to be used in the experiments
+    ranks = list(range(10, 300 + 1, 10))
+    ranks_for_ranktuning = np.arange(1, 50 + 1, 1)
+    def threshold_maker(name): return 15 if name == "Baseline" else 2
+    def perf_thresholds_maker(name): return (0.916, 0.914, 0.911) if name == "Baseline" else (0.910, 0.908, 0.905)
+elif task_name == "SequentialMNIST":
+    from GoGRU import GoGRU_sequence
+    from SequentialMNIST import SequentialMNIST
+
+    classificationTask = False
+
+    models = {
+        "Baseline": "models/SequentialMNIST/gogru_SequentialMNIST_21072022-132652.pt",
+        "NR+HLRA": "models/SequentialMNIST/gogru_SequentialMNIST_21072022-120843.pt",
+    }
+
+    dataset_test = MNIST(
+        root=str(Path.home()) + "/datasets", train=False, download=True
+    )
+    valset = SequentialMNIST(dataset_test)
+
+    modelConstructor = GoGRU_sequence
+    criterion = torch.nn.MSELoss()
+
+    # ranks to be considered
+    ranks = list(range(10, 200 + 1, 10))
+    ranks_for_ranktuning = np.arange(1, 120 + 1, 1)
+    def threshold_maker(name): return 20 if name == "Baseline" else 10
+    def perf_thresholds_maker(name): return (0.309, 0.311, 0.315) if name == "Baseline" else (0.309, 0.311, 0.315)
 else:
     print("Unknown task")
     exit(1)
@@ -423,9 +456,6 @@ results_dict = {}
 for name, (model, state) in models.items():
     print("Evaluating model %s" % name)
 
-    # ranks to be considered
-    ranks = list(range(10, 300 + 1, 10))
-
     print("Strategy #1 : use same rank for all matrices")
 
     xp_name = "%s" % (name)
@@ -446,7 +476,7 @@ for name, (model, state) in models.items():
         "Strategy #3 : use an error threshold to decide if a matrix will be factorised or not"
     )
 
-    threshold = 15 if name == "Baseline" else 2
+    threshold = threshold_maker(name)
     xp_name = "%s - Adaptative (%i)" % (name, threshold)
 
     results_dict[xp_name] = factorize_using_same_rank_for_all_matrices(
@@ -458,13 +488,8 @@ for name, (model, state) in models.items():
 
     xp_name = "%s - Rank-tuning" % (name)
 
-    # ranks = [2,4,6,8,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95]
-    ranks = np.arange(1, 50 + 1, 1)
-
-    acc_thresholds = (
-        (0.916, 0.914, 0.911) if name == "Baseline" else (0.910, 0.908, 0.905)
-    )
-    p1, p2, p3 = find_optimal_rank_for_each_matrix(state, ranks, acc_thresholds, name)
+    perf_thresholds = perf_thresholds_maker(name)
+    p1, p2, p3 = find_optimal_rank_for_each_matrix(state, ranks_for_ranktuning, perf_thresholds, name)
 
     print("Evaluating model with optimal ranks...")
 
@@ -504,7 +529,7 @@ with open("pickle/results_dicts/%s.pkl"%task_name, "wb") as f:
 fig = plt.figure(figsize=(15, 15))
 
 baseline_size = results_dict["Baseline"][2][-1]
-baseline_perf = results_dict["Baseline"][1][-1]
+baseline_perf = results_dict["Baseline"][1][-1] if classificationTask else results_dict["Baseline"][0][-1]
 
 plt.xlabel("% of baseline size")
 plt.ylabel("% of baseline performance")
@@ -524,13 +549,14 @@ colors = [
     "aqua",
 ]
 
-for i, (xp_name, (_, acc_br, memory_br, _)) in enumerate(results_dict.items()):
+for i, (xp_name, (loss_br, acc_br, memory_br, _)) in enumerate(results_dict.items()):
     color = colors[i]
     marker = "o"
+    perf_br = acc_br is classificationTask else loss_br
 
     plt.scatter(
         np.array(memory_br) / baseline_size * 100,
-        np.array(acc_br) / baseline_perf * 100,
+        np.array(perf_br) / baseline_perf * 100,
         label=xp_name,
         color=color,
         marker=marker,
@@ -541,7 +567,10 @@ plt.axvline(100, label="Baseline memory cost", ls="--", color="black")
 plt.axhline(100, label="Baseline performance", ls="--", color="black")
 # plt.axvline(28254*4/baseline_size*100, label="Minimal size for this architecture", ls='--', color='red')
 
-plt.ylim((90, 102))
+if classificationTask:
+    plt.ylim((90, 102))
+else:
+    plt.ylim((98, 110))
 
 plt.grid()
 plt.legend(loc="best")
