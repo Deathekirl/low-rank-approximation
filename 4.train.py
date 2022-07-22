@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Date: 21-07-2022
+Date: 22-07-2022
 
 Author: Lucas Maison
 
@@ -163,11 +163,11 @@ elif task_name == "AugMod":
     from GoGRU import GoGRU
 
     # task parameters
-    epochs = 200
+    epochs = 80
     lr = 1e-3
-    lambda_ = 0.0
+    lambda_ = 0.0#1e-4
     target_rank = 20
-    time_interval = 10000
+    time_interval = 10000#20
     epoch_a, epoch_b = 10, 120
     criterion = torch.nn.CrossEntropyLoss()
     classificationTask = True
@@ -175,13 +175,13 @@ elif task_name == "AugMod":
 
     # create dataset objects
     signals_train, signals_val, targets_train, targets_val = read_augmod(
-        str(Path.home()) + "/AugMod/augmod.hdf5", train_size, seed
+        str(Path.home()) + "/datasets/AugMod/augmod.hdf5", train_size, seed
     )
     trainset = AugMod(signals_train, targets_train)
     valset = AugMod(signals_val, targets_val)
 
     # create models
-    model = GoGRU(input_size=2, output_size=7)
+    model = GoGRU(input_size=2, output_size=7, num_layers=3, hidden_size=47)
 else:
     print("Unknown task")
     exit(1)

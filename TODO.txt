@@ -1,5 +1,7 @@
 - fusion 3 et 3 bis (option sys)
-- lancement de training augmod
+- LRA AugMod
+- factorization AugMod
+- faire x5 or x10 par tâche pour évaluer si l'apparente perte de perfs entre Baseline et NR+HLRA est liée à la seed ou intrinsèque à l'application de LRA
 
 
 OK
@@ -9,3 +11,4 @@ OK
 - soumettre le fichier de soumission LRA_2
 - adaptation du GoGru pour AugMod (=> utiliser input_size=2)
 - factorisation sur sequentialMNIST post training
+- lancement de training augmod

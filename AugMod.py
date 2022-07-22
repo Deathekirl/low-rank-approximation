@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Date: 21-07-2022
+Date: 22-07-2022
 
 Author: Lucas Maison
 
@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 
 class AugMod(Dataset):
     def __init__(self, X, y, a=0, b=None):
-        self.X = torch.from_numpy(X)[a:b, :, None]
+        self.X = torch.from_numpy(X)[a:b, :, :]
         self.y = torch.from_numpy(y)[a:b]
 
     def __len__(self):
@@ -58,9 +58,15 @@ def read_augmod(fname, train_size, seed):
         signals, targets, train_size=train_size, random_state=seed, shuffle=True
     )
 
+    signals_val, signals_test, targets_val, targets_test = train_test_split(
+        signals_val, targets_val, train_size=0.5, random_state=seed, shuffle=True
+    )
+
     print("X_train shape:", signals_train.shape)
     print("y_train shape:", targets_train.shape)
     print("X_val shape:", signals_val.shape)
     print("y_val shape:", targets_val.shape)
+    print("X_test shape:", signals_test.shape)
+    print("y_test shape:", targets_test.shape)
 
     return signals_train, signals_val, targets_train, targets_val
